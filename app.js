@@ -1,8 +1,15 @@
 const express = require('express');
 const mongoose = require('mongoose');
+const session = require('express-session');
 
 const app = express();
 app.use(express.static('static'));
+app.set('view engine', 'ejs');
+app.set('trust proxy', 1)
+app.use(session({
+    secret: 'awesome armadillo',
+    cookie: { maxAge: 60000 }
+}))
 
 const urlencoder = express.urlencoded({extended: true});
 const PORT = 3000;
@@ -49,7 +56,6 @@ const userSchema = new mongoose.Schema({
     reviews: [reviewSchema]
 });
 
-var logged_in = null;
 const User = mongoose.model('User', userSchema);
 const Book = mongoose.model('Book', bookSchema);
 const Review = mongoose.model('Review', reviewSchema);
@@ -62,31 +68,38 @@ app.listen(PORT, ()=>{
 
 // index route
 app.get('/', (req, res)=>{
-    if (!logged_in){
+    if (!req.session.logged_in){
         res.redirect('/login');
+    } else {
+        res.render(__dirname + '/templates/index', {pageTitle: 'Index'});
     }
 });
 
 
 // login route
 app.get('/login', (req, res)=>{
-    if (logged_in){
+    if (req.session.logged_in){
         res.redirect('/');
     }
     else{
-        res.sendFile(__dirname + 'templates/login.html')
+        res.render(__dirname + '/templates/form', {formName: 'Login'})
     }
 });
 
 app.post('/login', urlencoder, (req, res)=>{
-    username = req.body.username;
-    password = req.body.password;
+    const username = req.body.username;
+    const password = req.body.password;
     User.findOne({username: username, password: password}, (err, user)=>{
         if (err){
+            console.log(err);
             res.redirect('/login');
         } else {
-            logged_in = user.username;
-            res.redirect('/');
+            if(user){
+                req.session.logged_in = user.username;
+                res.redirect('/');
+            } else {
+                res.redirect('/login');
+            }
         }
     });
     
@@ -95,5 +108,34 @@ app.post('/login', urlencoder, (req, res)=>{
 
 // register route
 app.get('/register', (req, res)=>{
+    if (req.session.logged_in) {
+        res.redirect('/');
+    } else {
+        res.render(__dirname + '/templates/form', {formName: 'Register'})
+    }
+});
 
+app.post('/register', urlencoder, (req, res) => {
+    const username = req.body.username;
+    const password = req.body.password;
+    try {
+        registered = new User({
+            username: username,
+            password: password
+        })
+        registered.save();
+        res.redirect('/');
+
+    } catch (error) {
+        console.log(error);
+        res.redirect('/register');
+    }
+    
+});
+
+
+// logout route
+app.get('/logout', (req, res)=>{
+    req.session.logged_in = null;
+    res.redirect('/');
 });

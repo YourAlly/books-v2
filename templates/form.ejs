@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title><%= formName %></title>
+    </head>
+    <body>
+        <form method="POST">
+            <input type="text" required name="username" placeholder="Username">
+            <input type="password" required name="password" placeholder="Password">
+            <button type="submit"><%= formName %></button>
+        </form>
+        <br>
+        <% if (formName === 'Login'){ %>
+            Not yet registered? <a href="/register">Click Here</a>
+        <% } else { %>
+            Already have an account? <a href="/login">Click Here</a>
+        <% } %>
+    </body>
+</html>
